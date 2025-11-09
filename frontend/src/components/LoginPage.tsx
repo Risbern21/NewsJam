@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import { getApiEndpoint } from "../utils/api";
 
 interface LoginPageProps {
   onLogin: (username: string, email: string, password: string) => void;
@@ -38,7 +39,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       hashed_password: password,
     });
 
-    fetch("http://localhost:8000/api/v1/users", {
+    fetch(getApiEndpoint("/api/v1/users"), {
       method: "POST",
       headers: myHeaders,
       body: raw,

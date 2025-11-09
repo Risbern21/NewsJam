@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import type { User } from '../App';
+import { getApiEndpoint } from '../utils/api';
 
 interface ProfilePageProps {
   user: User | null;
@@ -42,10 +43,9 @@ export function ProfilePage({ user, onLogout, isDarkMode, onToggleDarkMode }: Pr
     
     setLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       const token = localStorage.getItem("access_token");
 
-      const response = await fetch(`${apiUrl}/api/v1/posts/user/me`, {
+      const response = await fetch(getApiEndpoint("/api/v1/posts/user/me"), {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { PostCard } from "./PostCard";
 import type { Post, User } from "../App";
+import { getApiUrl, getApiEndpoint } from "../utils/api";
 
 interface CommunityPageProps {
   posts: Post[];
@@ -23,9 +24,7 @@ export function CommunityPage({
     setError(null);
 
     try {
-      const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-
-      const response = await fetch(`${apiUrl}/api/v1/posts`, {
+      const response = await fetch(getApiEndpoint("/api/v1/posts"), {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
@@ -51,15 +50,22 @@ export function CommunityPage({
         let contentValue: string = post.content || "";
         
         if (post.url) {
-          // Check if URL is an image
-          const imagePattern = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
-          if (imagePattern.test(post.url)) {
+          // Check if URL is an image (starts with /dest/ or has image extension)
+          if (post.url.startsWith("/dest/")) {
             postType = "image";
-            imageUrl = post.url;
-            contentValue = post.content || post.title || ""; // Use content or title for image posts
+            // Construct full URL to backend
+            imageUrl = `${getApiUrl()}${post.url}`;
+            contentValue = post.content || ""; // Use extracted text content
           } else {
-            postType = "url";
-            contentValue = post.url; // For URL type, content should be the URL
+            const imagePattern = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+            if (imagePattern.test(post.url)) {
+              postType = "image";
+              imageUrl = post.url;
+              contentValue = post.content || post.title || "";
+            } else {
+              postType = "url";
+              contentValue = post.url; // For URL type, content should be the URL
+            }
           }
         } else if (post.content) {
           postType = "text";

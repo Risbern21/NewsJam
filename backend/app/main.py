@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from app.api.v1 import analysis, auth, posts, users
 
@@ -26,6 +28,11 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(posts.router, prefix="/api/v1")
 app.include_router(analysis.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
+
+# Mount static files directory for uploaded images (after routers to avoid conflicts)
+dest_dir = Path("dest")
+dest_dir.mkdir(exist_ok=True)
+app.mount("/dest", StaticFiles(directory="dest"), name="dest")
 
 @app.get("/")
 def root():

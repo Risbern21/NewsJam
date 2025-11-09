@@ -5,6 +5,7 @@ import { CommunityPage } from './components/CommunityPage';
 import { UploadPage } from './components/UploadPage';
 import { ProfilePage } from './components/ProfilePage';
 import { LoginPage } from './components/LoginPage';
+import { getApiEndpoint } from './utils/api';
 
 type Page = 'community' | 'upload' | 'profile' | 'login';
 
@@ -143,7 +144,7 @@ function App() {
       // STEP 1: Get JWT access token
       // Note: OAuth2PasswordRequestForm uses "username" field, but we send email since backend authenticates by email
       const tokenResponse = await fetch(
-        "http://localhost:8000/api/v1/auth/token",
+        getApiEndpoint("/api/v1/auth/token"),
         {
           method: "POST",
           headers: {
@@ -198,7 +199,7 @@ function App() {
 
       // STEP 2: Fetch user info using JWT dynamically
       const userResponse = await fetch(
-        "http://localhost:8000/api/v1/users/login",
+        getApiEndpoint("/api/v1/users/login"),
         {
           method: "GET",
           headers: {
@@ -246,7 +247,13 @@ function App() {
       return;
     }
 
-    const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+    // Image posts are already created by the upload_image_post endpoint
+    // Just navigate to community page
+    if (type === 'image' && !content) {
+      setCurrentPage('community');
+      return;
+    }
+
     const token = localStorage.getItem("access_token");
 
     try {
@@ -255,13 +262,13 @@ function App() {
         user_id: currentUser.id,
         title: title,
         content: content,
-        url: type === 'url' ? content : (imageUrl || null),
+        url: type === 'url' ? content : (type === 'image' ? imageUrl : null),
         likes: 0,
         dislikes: 0,
       };
 
       // Create the post via API
-      const postResponse = await fetch(`${apiUrl}/api/v1/posts`, {
+      const postResponse = await fetch(getApiEndpoint("/api/v1/posts"), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

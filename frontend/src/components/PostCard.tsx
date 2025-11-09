@@ -151,12 +151,30 @@ export function PostCard({ post, currentUser, onUpdatePost }: PostCardProps) {
           )}
 
           {post.type === "image" && post.imageUrl && (
-            <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-              <img
-                src={post.imageUrl}
-                alt={post.title}
-                className="w-full h-auto max-h-96 object-cover"
-              />
+            <div className="space-y-3">
+              {/* Display the image */}
+              <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <img
+                  src={post.imageUrl}
+                  alt={post.title}
+                  className="w-full h-auto max-h-96 object-contain"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    console.error("Failed to load image:", post.imageUrl);
+                  }}
+                />
+              </div>
+              {/* Display extracted text content if available */}
+              {post.content && post.content.trim() && (
+                <div className="p-3 bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Extracted Text:
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap text-sm">
+                    {post.content}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

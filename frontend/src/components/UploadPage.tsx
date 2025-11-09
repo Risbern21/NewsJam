@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link2, FileText, Image, Loader2, Upload as UploadIcon } from 'lucide-react';
 import { Button } from './ui/button';
@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { getApiEndpoint } from '../utils/api';
 
 interface UploadPageProps {
   onUpload: (type: 'url' | 'text' | 'image' | 'audio', content: string, title: string, imageUrl?: string) => Promise<void>;
@@ -17,9 +18,71 @@ export function UploadPage({ onUpload }: UploadPageProps) {
   const [urlInput, setUrlInput] = useState('');
   const [textInput, setTextInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Clean up object URL when component unmounts or image changes
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   const handleUpload = async () => {
+    if (!title.trim()) {
+      return;
+    }
+
+    // Handle image uploads separately - they use a different endpoint
+    if (activeTab === 'image' && imageFile) {
+      setIsUploading(true);
+      try {
+        const token = localStorage.getItem("access_token");
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        formData.append('title', title);
+
+        const uploadResponse = await fetch(getApiEndpoint("/api/v1/posts/upload_image_post"), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error("Failed to upload image and create post:", errorText);
+          alert("Failed to upload image and create post. Please try again.");
+          setIsUploading(false);
+          return;
+        }
+
+        // Post created successfully, call onUpload to handle navigation
+        await onUpload(activeTab, '', title, undefined);
+        
+        // Reset form
+        setTitle('');
+        setUrlInput('');
+        setTextInput('');
+        if (imagePreview) {
+          URL.revokeObjectURL(imagePreview);
+        }
+        setImageFile(null);
+        setImagePreview(null);
+        setIsUploading(false);
+        return;
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("An error occurred while uploading the image. Please try again.");
+        setIsUploading(false);
+        return;
+      }
+    }
+
+    // Handle URL and text uploads (existing flow)
     let content = '';
     let imageUrl = '';
     
@@ -27,15 +90,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
       content = urlInput;
     } else if (activeTab === 'text' && textInput.trim()) {
       content = textInput;
-    } else if (activeTab === 'image' && imageFile) {
-      content = imageFile.name;
-      // In a real app, you'd upload the image and get a URL
-      imageUrl = URL.createObjectURL(imageFile);
     } else {
-      return;
-    }
-
-    if (!title.trim()) {
       return;
     }
 
@@ -46,14 +101,23 @@ export function UploadPage({ onUpload }: UploadPageProps) {
     setTitle('');
     setUrlInput('');
     setTextInput('');
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setImageFile(null);
+    setImagePreview(null);
     setIsUploading(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Clean up previous preview URL
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
       setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -165,20 +229,27 @@ export function UploadPage({ onUpload }: UploadPageProps) {
                       htmlFor="image-upload"
                       className="cursor-pointer flex flex-col items-center gap-3"
                     >
-                      <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-full">
-                        <Image className="size-8 text-green-600 dark:text-green-500" />
-                      </div>
-                      {imageFile ? (
-                        <div>
-                          <p className="text-gray-900 dark:text-white mb-1">
-                            {imageFile.name}
-                          </p>
-                          <p className="text-gray-500 dark:text-gray-400">
-                            Click to change
-                          </p>
+                      {imageFile && imagePreview ? (
+                        <div className="w-full space-y-3">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="max-h-64 mx-auto rounded-lg object-contain"
+                          />
+                          <div>
+                            <p className="text-gray-900 dark:text-white mb-1">
+                              {imageFile.name}
+                            </p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm">
+                              Click to change image
+                            </p>
+                          </div>
                         </div>
                       ) : (
                         <>
+                          <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-full">
+                            <Image className="size-8 text-green-600 dark:text-green-500" />
+                          </div>
                           <p className="text-gray-900 dark:text-white">
                             Click to upload an image
                           </p>
